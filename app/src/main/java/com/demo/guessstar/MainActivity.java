@@ -8,8 +8,10 @@ import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -53,40 +55,69 @@ public class MainActivity extends AppCompatActivity {
         buttons.add(button2);
         buttons.add(button3);
         getContent();
+        playGame();
     }
-//
-    private void playGame(){
 
+    //
+    private void playGame() {
+        generateQuestion();
+        DownLoadImageTask task = new DownLoadImageTask();
+        try {
+            Bitmap bitmap = task.execute(urls.get(numberOfQuestion)).get();
+            if(bitmap != null){
+                imageViewStar.setImageBitmap(bitmap);
+                for(int i=0;i<buttons.size();i++){
+                    if(i==numberOfRightAnswer){
+                        buttons.get(i).setText(names.get(numberOfQuestion));
+                    }else{
+                       int  wrongAnswer = generateWrongAnswer();
+                       buttons.get(i).setText(names.get(wrongAnswer));
+                    }
+                }
+            }
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
     //
-    private void generateQuestion(){
-numberOfQuestion = (int) Math.random() * names.size();
+    private int generateWrongAnswer(){
+        return (int) (Math.random() * names.size());
     }
+
+    //
+    private void generateQuestion() {
+        numberOfQuestion = (int) (Math.random() * names.size());
+        numberOfRightAnswer = (int) (Math.random() * buttons.size());
+    }
+
     //
     private void getContent() {
         DownLoadContentTask task = new DownLoadContentTask();
         try {
             String content = task.execute(url).get();
-            String start = "<p class = TOP 100";
-            String finish = "<div class=\"col-xs\">";
+            String start = "class=\"common_rating_list";
+            String finish = "<!-- Forbes In-Stat counter -->";
             Pattern pattern = Pattern.compile(start + "(.*?)" + finish);
             Matcher matcher = pattern.matcher(content);
             String splitContent = "";
             while (matcher.find()) {
                 splitContent = matcher.group(1);
             }
-            //Log.i("NAME_", splitContent);
+            Log.i("NAME_", splitContent);
             Pattern patterImg = Pattern.compile("<img src=\"(.*?)\"");
-            Pattern patternName = Pattern.compile("alt=\"(.*?)\"/>");
+            Pattern patternName = Pattern.compile("alt=\"(.*?)\" ");
             Matcher matcherImg = patterImg.matcher(splitContent);
             Matcher matcherName = patternName.matcher(splitContent);
-            while (matcherImg.find()){
+            while (matcherImg.find()) {
                 urls.add(matcherImg.group(1));
             }
-            while (matcherName.find()){
+            while (matcherName.find()) {
                 names.add(matcherName.group(1));
             }
-            for(String s:names){
+
+            for (String s : names) {
                 Log.i("NAME_", s);
             }
         } catch (ExecutionException e) {
@@ -94,6 +125,17 @@ numberOfQuestion = (int) Math.random() * names.size();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public void onClickAnswer(View view) {
+        Button button = (Button) view;
+        String tag = button.getTag().toString();
+        if(Integer.parseInt(tag) == numberOfRightAnswer){
+            Toast.makeText(this, "Правильный ответ", Toast.LENGTH_SHORT).show();
+        }else {
+            Toast.makeText(this, "Неправильный ответ, правильный:" + names.get(numberOfQuestion), Toast.LENGTH_SHORT).show();
+        }
+        playGame();
     }
 
     //
